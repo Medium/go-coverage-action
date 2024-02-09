@@ -49,6 +49,10 @@ inputs:
     description: 'Override the whole go test call with a custom command. Useful when using a custom script or make rule.'
     required: false
     default: ''
+  cov-file-path:
+    descripton: 'Path where the .cov file will be written when using coverage-cmd input'
+    required: false
+    default: ''
 
 outputs:
   report-pathname:

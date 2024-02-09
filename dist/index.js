@@ -12382,8 +12382,18 @@ async function runCoverage(gocovPathname) {
 
   // If we have an explicit command to run, use that and return
   if (coverCmd) {
+    const covFilePath = core.getInput('cov-file-path');
+    if (!covFilePath) {
+      core.setFailed('cov-file-path is required when using coverage-cmd');
+    }
+
     const args = coverCmd.split(/\s+/);
     await exec(args[0], args.slice(1));
+
+    // Move the coverage file to the expected location so the next part
+    // will pick it up
+    await exec('mv', [covFilePath, gocovPathname])
+
     return;
   }
 
