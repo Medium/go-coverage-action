@@ -28,7 +28,7 @@ inputs:
   coverage-threshold:
     description: 'Fail the build if the coverage drops below supplied percentage'
     required: false
-    default: 0 
+    default: 0
   fail-coverage:
     description: 'Fail the build if coverage drops below coverage-threshold.  One of "always", "never" or "only_pull_requests"'
     required: false
@@ -41,6 +41,10 @@ inputs:
     description: 'One or more regular expressions matching filenames to exclude from coverage statistics (e.g. for generated Go files)'
     required: false
     default: ''
+  notes-ref:
+    description: 'The refname to use for the git notes. Defaults to gocoverage'
+    required: false
+    default: gocoverage
 
 outputs:
   report-pathname:
