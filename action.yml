@@ -45,6 +45,10 @@ inputs:
     description: 'The refname to use for the git notes. Defaults to gocoverage'
     required: false
     default: gocoverage
+  coverage-cmd:
+    description: 'Override the whole go test call with a custom command. Useful when using a custom script or make rule.'
+    required: false
+    default: ''
 
 outputs:
   report-pathname:

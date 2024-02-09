@@ -12377,25 +12377,15 @@ function packageDelta(prior, now) {
   return pkgs;
 }
 
-async function generateCoverage() {
-  const report = {
-    pkg_count: 0,
-    with_tests: 0,
-    no_tests: 0,
-    skipped_count: 0,
-    coverage_pct: 0,
-    reportPathname: '',
-    gocovPathname: '',
-    gocovAggPathname: '',
-  };
+async function runCoverage(gocovPathname) {
+  const coverCmd = core.getInput('coverage-cmd');
 
-  report.gocovPathname = path.join(tmpdir, 'go.cov');
-  report.gocovAggPathname = path.join(tmpdir, 'go-aggregate.cov');
-
-  const filename = core.getInput('report-filename');
-  report.reportPathname = filename.startsWith('/')
-    ? filename
-    : path.join(tmpdir, filename);
+  // If we have an explicit command to run, use that and return
+  if (coverCmd) {
+    const args = coverCmd.split(/\s+/);
+    await exec(args[0], args.slice(1));
+    return;
+  }
 
   const coverMode = core.getInput('cover-mode');
   const coverPkg = core.getInput('cover-pkg');
@@ -12416,11 +12406,34 @@ async function generateCoverage() {
       '-covermode',
       coverMode,
       '-coverprofile',
-      report.gocovPathname,
+      gocovPathname,
       ...(coverPkg ? ['-coverpkg', coverPkg] : []),
       './...',
     ]);
   await exec('go', args);
+}
+
+async function generateCoverage() {
+  const report = {
+    pkg_count: 0,
+    with_tests: 0,
+    no_tests: 0,
+    skipped_count: 0,
+    coverage_pct: 0,
+    reportPathname: '',
+    gocovPathname: '',
+    gocovAggPathname: '',
+  };
+
+  report.gocovPathname = path.join(tmpdir, 'go.cov');
+  report.gocovAggPathname = path.join(tmpdir, 'go-aggregate.cov');
+
+  const filename = core.getInput('report-filename');
+  report.reportPathname = filename.startsWith('/')
+    ? filename
+    : path.join(tmpdir, filename);
+
+  await runCoverage(report.gocovPathname);
 
   const pkgStats = {};
   const [globalPct, skippedFileCount, pkgStmts] = await calcCoverage(
