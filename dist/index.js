@@ -12171,7 +12171,7 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"go-coverage-action","version":"1.0.0","description":"Coverage reports for the Go programming language","main":"index.js","scripts":{"lint":"eslint .","prettier":"prettier -c ./*.js","prepare":"ncc build index.js -o dist --source-map --license licenses.txt","all":"npm run lint && npm run prepare"},"repository":{"type":"git","url":"git+https://github.com/gwatts/go-coverage-action.git"},"keywords":["GitHub","Actions","Golang","Go","Testing","Coverage"],"author":"gwatts","license":"MIT","bugs":{"url":"https://github.com/gwatts/go-coverage-action/issues"},"homepage":"https://github.com/gwatts/go-coverage-action#readme","dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1","execa":"^6.1.0"},"devDependencies":{"@vercel/ncc":"^0.36.0","eslint":"^8.30.0","prettier":"^2.8.1"},"volta":{"node":"16.14.0"}}');
+module.exports = JSON.parse('{"name":"go-coverage-action","version":"1.0.0","description":"Coverage reports for the Go programming language","main":"index.js","scripts":{"lint":"eslint .","prettier":"prettier -c ./*.js","prepare":"ncc build index.js -o dist --source-map --license licenses.txt","all":"npm run lint && npm run prepare"},"repository":{"type":"git","url":"git+https://github.com/gwatts/go-coverage-action.git"},"keywords":["GitHub","Actions","Golang","Go","Testing","Coverage"],"author":"gwatts","license":"MIT","bugs":{"url":"https://github.com/gwatts/go-coverage-action/issues"},"homepage":"https://github.com/gwatts/go-coverage-action#readme","dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1","execa":"^6.1.0"},"devDependencies":{"@vercel/ncc":"^0.36.0","eslint":"^8.30.0","prettier":"^2.8.1"},"volta":{"node":"20.11.0"}}');
 
 /***/ })
 
@@ -12293,15 +12293,17 @@ async function setup() {
 }
 
 async function fetchCoverage() {
+  const notesRef = core.getInput('notes-ref');
   try {
+    const refName = `refs/notes/${notesRef}`;
     await exec('git', [
       'fetch',
       'origin',
-      '+refs/notes/gocoverage:refs/notes/gocoverage',
+      `+${refName}:${refName}`,
     ]);
   } catch (e) {
     // expected to fail if the ref hasn't been created yet
-    core.info('no existing gocoverage ref');
+    core.info(`no existing ${notesRef} ref`);
   }
 }
 
@@ -12310,13 +12312,14 @@ async function setCoverageNote(data) {
   core.startGroup('new coverage raw data');
   core.info(`new coverage data:  ${jsdata}`);
   core.endGroup();
+  const notesRef = core.getInput('notes-ref');
   await fetchCoverage();
   await exec(
     'git',
-    ['notes', '--ref=gocoverage', 'add', '-f', '--file=-', ctx.sha],
+    ['notes', `--ref=${notesRef}`, 'add', '-f', '--file=-', ctx.sha],
     jsdata
   );
-  await exec('git', ['push', 'origin', 'refs/notes/gocoverage']);
+  await exec('git', ['push', 'origin', `refs/notes/${notesRef}`]);
 }
 
 async function getPriorCoverage() {
@@ -12327,9 +12330,10 @@ async function getPriorCoverage() {
     return stats;
   }
   try {
+    const notesRef = core.getInput('notes-ref');
     const { output } = await exec('git', [
       'log',
-      '--notes=gocoverage',
+      `--notes=${notesRef}`,
       '--pretty=format:%H%n%N',
       '--grep=coverage_pct',
       '-n',
@@ -12529,9 +12533,13 @@ async function calcCoverage(goCovFilename, aggFilename) {
   return [globalPct, skippedFiles.size, pkgStats];
 }
 
-const commentMarker = '<!-- gocovaction -->';
+function getCommentMarker() {
+  const notesRef = core.getInput('notes-ref');
+  return `<!-- ${notesRef} -->`;
+}
 
 async function generatePRComment(stats) {
+  const commentMarker = getCommentMarker();
   let commitComment = `${commentMarker}Go test coverage: ${stats.current.coverage_pct.toFixed(
     1
   )}% for commit ${ctx.sha}`;
@@ -12636,6 +12644,8 @@ async function findPreviousComment(octokit, issue_number) {
     issue_number: issue_number,
     per_page: 100,
   });
+
+  const commentMarker = getCommentMarker();
 
   for await (const { data: comments } of it) {
     for (const comment of comments) {
